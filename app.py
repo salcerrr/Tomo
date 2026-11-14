@@ -1,3 +1,5 @@
+import os
+import socket
 import threading
 import time
 import uuid
@@ -1189,14 +1191,33 @@ if __name__ == "__main__":
     print("================================")
     print()
 
+    # Con TOMO_LAN=1 la app también se puede abrir desde otros aparatos
+    # de la misma red WiFi (por ejemplo, el celular).
+    lan = os.environ.get("TOMO_LAN") == "1"
+
     print("Abrí http://127.0.0.1:5000")
+
+    if lan:
+
+        try:
+            # No envía nada: solo averigua qué IP usa esta PC en la red.
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect(("10.255.255.255", 1))
+            address = probe.getsockname()[0]
+            probe.close()
+
+            print(f"Desde el celular (mismo WiFi): http://{address}:5000")
+
+        except OSError:
+            print("Desde el celular: usá la IP de esta PC (ipconfig) y :5000")
+
     print()
 
     print("Presioná Ctrl+C para cerrar.")
     print()
 
     app.run(
-        host="127.0.0.1",
+        host="0.0.0.0" if lan else "127.0.0.1",
         port=5000,
         debug=False,
         threaded=True

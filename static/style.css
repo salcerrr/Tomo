@@ -997,6 +997,9 @@ input[type="number"].field {
     gap: 14px;
     padding: 2px 20px 12px 0;
     overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
 }
 
@@ -1257,6 +1260,54 @@ input[type="number"].field {
     color: var(--text);
 }
 
+.arg-upcoming {
+    display: grid;
+    gap: 4px;
+    margin: 4px 0 2px;
+}
+
+.up {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 6px 10px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 var(--radius-small) var(--radius-small) 0;
+    font-size: 0.87rem;
+}
+
+.up-reedicion {
+    border-left-color: var(--own);
+    background: rgba(108, 196, 161, 0.1);
+}
+
+.up-especial {
+    border-left-color: var(--gold);
+    background: rgba(227, 181, 82, 0.1);
+}
+
+.up-kind {
+    color: var(--muted);
+}
+
+.up-volume {
+    color: var(--text);
+}
+
+.up-when {
+    color: var(--text);
+}
+
+.up-tag {
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
 .arg-sources {
     display: flex;
     flex-wrap: wrap;
@@ -1414,10 +1465,12 @@ input[type="number"].field {
 
 .shelf-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
 }
 
 .shelf-card {
+    min-width: 0;
     padding: 18px;
     background: var(--surface);
     border: 1px solid var(--line-soft);
@@ -1592,6 +1645,7 @@ input[type="number"].field {
 
 .shelf-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -1811,6 +1865,57 @@ input[type="number"].field {
     .spine {
         width: 32px;
         height: 60px;
+    }
+}
+
+/* Celular: carrusel sin huecos, tomos en una fila deslizable */
+@media (max-width: 720px) {
+
+    .manga-rail {
+        align-items: flex-start;
+        scroll-snap-type: none;
+    }
+
+    .manga-card {
+        width: 200px;
+    }
+
+    .manga-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .english-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .synopsis {
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+    }
+
+    .manga-info {
+        flex: none;
+    }
+
+    .spines {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 16px;
+    }
+
+    .spine {
+        flex: none;
     }
 }
 

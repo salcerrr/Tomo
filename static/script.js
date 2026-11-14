@@ -1,4 +1,3 @@
-
 const magazineSort = document.getElementById("magazineSort");
 const magazineList = document.getElementById("magazineList");
 
@@ -190,7 +189,6 @@ function createMangaSortControl() {
 
     const select = document.createElement("select");
     select.id = "mangaSort";
-    select.className = "field";
 
     const options = [
         {
@@ -1197,7 +1195,7 @@ function renderCatalog() {
 }
 
 
-function updateSection(section) {
+function updateSection(section, soft = false) {
     const index = magazineSections.findIndex(
         item => item.name === section.name
     );
@@ -1211,7 +1209,11 @@ function updateSection(section) {
     // Llegó una sección nueva: se reconstruyen los conteos globales.
     refreshFilterCounts();
 
-    renderCatalog();
+    if (soft) {
+        renderCatalogSoft();
+    } else {
+        renderCatalog();
+    }
 }
 
 
@@ -1265,6 +1267,40 @@ function updateMangaForum(update) {
 // Consultar el progreso
 // --------------------------------
 
+// Mientras el dedo está sobre la pantalla (o recién se soltó), no se
+// reconstruye la lista: reemplazar el DOM en pleno scroll corta el gesto.
+let touchActive = false;
+let lastScrollAt = 0;
+let pendingRender = false;
+
+function isUserScrolling() {
+    return touchActive || Date.now() - lastScrollAt < 300;
+}
+
+function renderCatalogSoft() {
+    if (isUserScrolling()) {
+        pendingRender = true;
+        return;
+    }
+
+    pendingRender = false;
+    renderCatalog();
+}
+
+document.addEventListener("touchstart", () => { touchActive = true; }, { passive: true });
+document.addEventListener("touchend", () => { touchActive = false; lastScrollAt = Date.now(); }, { passive: true });
+document.addEventListener("touchcancel", () => { touchActive = false; lastScrollAt = Date.now(); }, { passive: true });
+window.addEventListener("scroll", () => { lastScrollAt = Date.now(); }, { passive: true });
+document.addEventListener("scroll", () => { lastScrollAt = Date.now(); }, { passive: true, capture: true });
+
+setInterval(() => {
+    if (pendingRender && !isUserScrolling()) {
+        pendingRender = false;
+        renderCatalog();
+    }
+}, 250);
+
+
 async function pollDiscovery(jobId) {
     let offset = 0;
     let forumOffset = 0;
@@ -1286,7 +1322,7 @@ async function pollDiscovery(jobId) {
         }
 
         for (const section of data.sections) {
-            updateSection(section);
+            updateSection(section, true);
             offset++;
         }
 
@@ -1301,7 +1337,7 @@ async function pollDiscovery(jobId) {
         }
 
         if (forumChanged) {
-            renderCatalog();
+            renderCatalogSoft();
         }
 
         catalogCounter.textContent =
