@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+
+    <title>Tomo</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <a class="brand" href="#/descubrir">
+        <span class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i>
+        </span>
+
+        <span class="brand-name">Tomo</span>
+    </a>
+
+    <nav class="main-nav" id="mainNav" aria-label="Secciones">
+        <a class="nav-tab" href="#/descubrir" data-view="descubrir">Descubrir</a>
+        <a class="nav-tab" href="#/argentina" data-view="argentina">En Argentina</a>
+        <a class="nav-tab" href="#/biblioteca" data-view="biblioteca">
+            Mi biblioteca
+            <span class="nav-count hidden" id="navLibraryCount"></span>
+        </a>
+    </nav>
+
+</header>
+
+
+<main class="container">
+
+
+<!-- ============================================================
+     DESCUBRIR
+============================================================ -->
+
+<div class="view" id="view-descubrir">
+
+    <section class="start-panel"
+             id="startPanel">
+
+        <div class="start-copy">
+
+            <h1>
+                Qué se publica en las revistas de lo que leés
+            </h1>
+
+            <p class="hero-copy">
+                Tomo busca las revistas donde salen los mangas que tenés en
+                Reading y te muestra todo lo que se publica en ellas, menos
+                lo que ya estás leyendo.
+            </p>
+
+        </div>
+
+        <ol class="steps">
+
+            <li class="step">
+
+                <span class="step-number">1</span>
+
+                <div class="step-body">
+
+                    <strong>Tu lista de MyAnimeList</strong>
+
+                    <p id="libraryStatus">
+                        Leyendo exportación XML...
+                    </p>
+
+                </div>
+
+                <label class="btn btn-ghost"
+                       for="listUpload">
+                    Cambiar archivo
+                </label>
+
+                <input
+                    id="listUpload"
+                    type="file"
+                    accept=".xml,.gz"
+                    hidden
+                >
+
+            </li>
+
+            <li class="step">
+
+                <span class="step-number">2</span>
+
+                <div class="step-body">
+
+                    <strong>Buscar en las revistas</strong>
+
+                    <p id="searchHint">
+                        La primera vez tarda unos minutos. Después usa
+                        lo que quedó guardado.
+                    </p>
+
+                </div>
+
+                <button type="button"
+                        id="searchButton"
+                        class="btn btn-primary">
+                    Buscar mangas
+                </button>
+
+            </li>
+
+        </ol>
+
+    </section>
+
+
+    <div class="error-box hidden"
+         id="searchError">
+    </div>
+
+
+    <div class="catalog-status hidden"
+         id="catalogStatusBox">
+
+        <div class="catalog-status-icon">
+            <div class="loader-small"></div>
+        </div>
+
+        <div class="catalog-status-copy">
+
+            <strong id="catalogStatus">
+                Preparando catálogo...
+            </strong>
+
+            <p id="catalogProgress">
+                Conectando con Tenrai.
+            </p>
+
+        </div>
+
+        <span class="catalog-counter"
+              id="catalogCounter">
+            0 / –
+        </span>
+
+    </div>
+
+
+    <section class="panel filters-panel hidden"
+             id="filtersPanel">
+
+        <div class="filters-head">
+
+            <div>
+                <h2>Filtrar por género o theme</h2>
+
+                <p class="filters-hint">
+                    Elegí una opción por vez: al marcar un género se
+                    desmarca el theme, y al revés. Cada manga cuenta una
+                    sola vez, aunque salga en varias revistas.
+                </p>
+            </div>
+
+            <div class="filters-tools">
+
+                <input
+                    id="filterSearch"
+                    class="field"
+                    type="search"
+                    placeholder="Buscar género o theme"
+                    autocomplete="off"
+                    aria-label="Buscar género o theme"
+                >
+
+                <button type="button"
+                        id="clearFilterButton"
+                        class="btn btn-ghost"
+                        disabled>
+                    Mostrar todos
+                </button>
+
+            </div>
+
+        </div>
+
+        <p class="filters-summary"
+           id="filtersSummary">
+            Todavía no hay mangas para filtrar.
+        </p>
+
+        <div class="filter-groups">
+
+            <div class="filter-group filter-group-genre"
+                 id="genreGroup">
+
+                <div class="filter-group-head">
+                    <h3>Géneros</h3>
+                    <span class="filter-group-total"
+                          id="genreTotal">0</span>
+                </div>
+
+                <div class="filter-chips"
+                     id="genreFilters">
+                </div>
+
+                <button type="button"
+                        class="filter-more hidden"
+                        id="genreMore">
+                </button>
+
+            </div>
+
+            <div class="filter-group filter-group-theme"
+                 id="themeGroup">
+
+                <div class="filter-group-head">
+                    <h3>Themes</h3>
+                    <span class="filter-group-total"
+                          id="themeTotal">0</span>
+                </div>
+
+                <div class="filter-chips"
+                     id="themeFilters">
+                </div>
+
+                <button type="button"
+                        class="filter-more hidden"
+                        id="themeMore">
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <div class="active-filter-bar hidden"
+         id="activeFilterBar">
+
+        <span class="active-filter-label"
+              id="activeFilterLabel"></span>
+
+        <button type="button"
+                id="activeFilterClear"
+                class="btn btn-ghost btn-small">
+            Mostrar todos
+        </button>
+
+    </div>
+
+
+    <section class="catalog-section hidden"
+             id="catalogSection">
+
+        <div class="catalog-heading">
+
+            <div>
+                <h2>Revistas</h2>
+
+                <p class="catalog-description"
+                   id="catalogDescription">
+                    Cada revista muestra los mangas en publicación
+                    que encontramos en ella.
+                </p>
+            </div>
+
+            <div class="sort-controls"
+                 id="sortControls">
+
+                <div class="catalog-sort">
+
+                    <label for="magazineSort">
+                        Ordenar revistas por
+                    </label>
+
+                    <select id="magazineSort" class="field">
+
+                        <option value="count_desc">
+                            Mayor cantidad de mangas
+                        </option>
+
+                        <option value="count_asc">
+                            Menor cantidad de mangas
+                        </option>
+
+                        <option value="name_asc">
+                            Nombre (A-Z)
+                        </option>
+
+                        <option value="name_desc">
+                            Nombre (Z-A)
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="magazine-list"
+             id="magazineList">
+        </div>
+
+    </section>
+
+</div>
+
+
+<!-- ============================================================
+     EN ARGENTINA
+============================================================ -->
+
+<div class="view hidden" id="view-argentina">
+
+    <header class="view-head">
+
+        <div>
+            <h1 class="view-title">Tu lista en Argentina</h1>
+
+            <p class="view-lead">
+                Mangas de tu lista de MyAnimeList que salen en papel
+                de editoriales argentinas, no importados.
+            </p>
+        </div>
+
+        <div class="head-actions">
+
+            <button type="button"
+                    id="addManualButton"
+                    class="btn btn-ghost">
+                Agregar un manga a mano
+            </button>
+
+            <button type="button"
+                    id="refreshCatalogButton"
+                    class="btn btn-primary">
+                Actualizar catálogo
+            </button>
+
+        </div>
+
+    </header>
+
+    <div class="error-box hidden" id="argError"></div>
+
+    <section class="source-panel" aria-label="Estado del catálogo">
+
+        <p class="source-text" id="sourceText">
+            Cargando catálogo...
+        </p>
+
+        <a class="btn btn-ghost btn-small hidden"
+           id="debugLink"
+           href="/api/argentina/debug"
+           download>
+            Descargar diagnóstico de fichas ilegibles
+        </a>
+
+        <div class="progress hidden" id="catalogBar">
+
+            <div class="progress-track">
+                <div class="progress-fill" id="catalogBarFill"></div>
+            </div>
+
+            <p class="progress-text" id="catalogBarText"></p>
+
+        </div>
+
+    </section>
+
+    <div class="toolbar">
+
+        <div class="chip-row" id="argStatusFilter" role="group"
+             aria-label="Estado en tu lista">
+        </div>
+
+        <select id="argPublisher" class="field" aria-label="Editorial">
+            <option value="">Todas las editoriales</option>
+        </select>
+
+        <input id="argSearch"
+               class="field"
+               type="search"
+               placeholder="Buscar en esta lista"
+               aria-label="Buscar en esta lista"
+               autocomplete="off">
+
+    </div>
+
+    <p class="result-line" id="argResultLine"></p>
+
+    <div class="arg-list" id="argList"></div>
+
+    <section class="not-found" id="notFoundSection">
+
+        <button type="button"
+                class="not-found-toggle"
+                id="notFoundToggle"
+                aria-expanded="false"
+                aria-controls="notFoundBody">
+
+            <span>
+                <strong>Mangas de tu lista que no encontré en Argentina</strong>
+                <small id="notFoundCount"></small>
+            </span>
+
+            <span class="chevron" aria-hidden="true"></span>
+
+        </button>
+
+        <div class="not-found-body hidden" id="notFoundBody">
+
+            <p class="not-found-help">
+                Si tenés alguno de estos en papel, o sabés que sale
+                acá, tocá <em>Sale en Argentina</em> y cargalo.
+                Se guarda y no se pisa al actualizar el catálogo.
+            </p>
+
+            <input id="notFoundSearch"
+                   class="field"
+                   type="search"
+                   placeholder="Buscar en esta lista"
+                   aria-label="Buscar entre los no encontrados"
+                   autocomplete="off">
+
+            <ul class="not-found-list" id="notFoundList"></ul>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<!-- ============================================================
+     MI BIBLIOTECA
+============================================================ -->
+
+<div class="view hidden" id="view-biblioteca">
+
+    <header class="view-head">
+
+        <div>
+            <h1 class="view-title">Mi biblioteca</h1>
+
+            <p class="view-lead">
+                Tocá cada tomo para marcarlo: una vez es que lo tenés,
+                dos veces es que es edición especial, tres lo saca.
+            </p>
+        </div>
+
+        <dl class="stat-row" id="libStats"></dl>
+
+    </header>
+
+    <div class="error-box hidden" id="libError"></div>
+
+    <div class="toolbar">
+
+        <div class="chip-row" id="libFilter" role="group"
+             aria-label="Filtro de series">
+        </div>
+
+        <input id="libSearch"
+               class="field"
+               type="search"
+               placeholder="Buscar en mi biblioteca"
+               aria-label="Buscar en mi biblioteca"
+               autocomplete="off">
+
+    </div>
+
+    <ul class="legend" aria-label="Referencia de tomos">
+        <li><span class="spine-sample"></span>Lo tengo</li>
+        <li><span class="spine-sample special"></span>Edición especial</li>
+        <li><span class="spine-sample missing"></span>Me falta</li>
+    </ul>
+
+    <div class="shelf-list" id="shelfList"></div>
+
+</div>
+
+
+<footer>
+
+    <p>
+        Datos de
+        <a href="https://myanimelist.net/"
+           target="_blank"
+           rel="noopener noreferrer">MyAnimeList</a>
+        a través de
+        <a href="https://api.tenrai.org/documentation"
+           target="_blank"
+           rel="noopener noreferrer">Tenrai API</a>
+        y del catálogo de
+        <a href="https://www.ivrea.com.ar/catalogo/"
+           target="_blank"
+           rel="noopener noreferrer">Ivrea Argentina</a>.
+    </p>
+
+</footer>
+
+</main>
+
+
+<!-- ============================================================
+     Diálogo: cargar un manga a mano
+============================================================ -->
+
+<dialog id="manualDialog" class="dialog" aria-labelledby="manualTitle">
+
+    <form method="dialog" id="manualForm" class="dialog-form" novalidate>
+
+        <h2 id="manualTitle">Sale en Argentina</h2>
+
+        <div id="manualSearchBlock">
+
+            <label for="manualQuery">Buscá el manga en MyAnimeList</label>
+
+            <div class="inline-field">
+                <input id="manualQuery"
+                       class="field"
+                       type="search"
+                       placeholder="Por ejemplo: Dandadan"
+                       autocomplete="off">
+
+                <button type="button"
+                        id="manualSearchButton"
+                        class="btn btn-ghost">
+                    Buscar
+                </button>
+            </div>
+
+            <ul class="search-results" id="manualResults"></ul>
+
+        </div>
+
+        <div id="manualChosen" class="chosen hidden"></div>
+
+        <div class="form-grid">
+
+            <div>
+                <label for="manualPublisher">Editorial argentina</label>
+
+                <input id="manualPublisher"
+                       class="field"
+                       list="publisherList"
+                       placeholder="Ivrea, Panini, Ovni Press..."
+                       autocomplete="off">
+
+                <datalist id="publisherList"></datalist>
+            </div>
+
+            <div>
+                <label for="manualVolumes">Tomos publicados</label>
+
+                <input id="manualVolumes"
+                       class="field"
+                       type="number"
+                       min="0"
+                       max="2000"
+                       inputmode="numeric"
+                       placeholder="Opcional">
+            </div>
+
+            <div>
+                <label for="manualStatus">Estado en Argentina</label>
+
+                <select id="manualStatus" class="field">
+                    <option value="">No sé</option>
+                    <option value="En curso">En curso</option>
+                    <option value="Completa">Completa</option>
+                </select>
+            </div>
+
+        </div>
+
+        <p class="form-error hidden" id="manualError"></p>
+
+        <div class="dialog-actions">
+
+            <button type="button"
+                    id="manualCancel"
+                    class="btn btn-ghost">
+                Cancelar
+            </button>
+
+            <button type="submit"
+                    id="manualSave"
+                    class="btn btn-primary">
+                Guardar
+            </button>
+
+        </div>
+
+    </form>
+
+</dialog>
+
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script src="{{ url_for('static', filename='argentina.js') }}"></script>
+
+</body>
+</html>

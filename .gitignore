@@ -1,0 +1,13 @@
+# Entorno virtual y archivos de Python
+.venv/
+__pycache__/
+*.pyc
+
+# Datos personales y cachés: se generan solos al usar la app
+data/
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
