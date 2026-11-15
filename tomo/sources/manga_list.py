@@ -1,30 +1,37 @@
 import gzip
-import xml.etree.ElementTree as ET
+import io
 
 from pathlib import Path
+
+# defusedxml rechaza los trucos de XML malicioso (entidades que se expanden
+# hasta agotar la memoria, entidades externas, etc.).
+import defusedxml.ElementTree as ET
+
+# Tope de tamaño del XML ya descomprimido. Una exportación real pesa unos
+# pocos MB; esto frena archivos .gz que se expanden a gigabytes.
+MAX_XML_BYTES = 64 * 1024 * 1024
 
 
 class MangaListError(Exception):
     pass
 
 
-def read_export(path: Path):
-
-    if not path.exists():
-        raise MangaListError(
-            f"No se encontró la exportación: {path}"
-        )
+def parse_export(raw: bytes):
+    """Lee el XML de una exportación (comprimido con gzip o no)."""
 
     try:
 
-        raw = path.read_bytes()
-
-        # Se detecta GZIP por su firma y no por la extensión, porque
-        # los archivos subidos se guardan temporalmente como .tmp y
-        # el archivo guardado siempre se llama .xml.gz.
+        # Se detecta GZIP por su firma y no por la extensión: los
+        # archivos subidos pueden venir como .xml o como .xml.gz.
         if raw[:2] == b"\x1f\x8b":
 
-            content = gzip.decompress(raw)
+            with gzip.GzipFile(fileobj=io.BytesIO(raw)) as archive:
+                content = archive.read(MAX_XML_BYTES + 1)
+
+            if len(content) > MAX_XML_BYTES:
+                raise MangaListError(
+                    "El archivo descomprimido es demasiado grande."
+                )
 
         else:
 
@@ -39,9 +46,34 @@ def read_export(path: Path):
         )
 
 
+def read_export(path: Path):
+
+    if not path.exists():
+        raise MangaListError(
+            f"No se encontró la exportación: {path}"
+        )
+
+    try:
+        raw = path.read_bytes()
+    except OSError as error:
+        raise MangaListError(
+            f"No se pudo leer la exportación: {error}"
+        )
+
+    return parse_export(raw)
+
+
 def load_mal_list(path: Path):
 
-    root = read_export(path)
+    return summarize_export(read_export(path))
+
+
+def load_mal_list_bytes(raw: bytes):
+
+    return summarize_export(parse_export(raw))
+
+
+def summarize_export(root):
 
     info = root.find("myinfo")
 

@@ -3,11 +3,17 @@
 __pycache__/
 *.pyc
 
+# Configuración local (contraseñas de la base)
+.env
+
 # Datos personales y cachés: se generan solos al usar la app
 data/
+
+# Pruebas
+.pytest_cache/
 
 # Editor / sistema
 .vscode/
 .idea/
 .DS_Store
-Thumbs.db
+Thumbs.db

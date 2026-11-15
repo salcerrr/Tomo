@@ -24,7 +24,7 @@ echo.
 
 call .venv\Scripts\activate
 
-py -m pip install -r requirements.txt
+py -m pip install --quiet --disable-pip-version-check -r requirements.txt
 
 echo.
 echo Iniciando aplicacion...

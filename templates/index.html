@@ -9,10 +9,10 @@
     <title>Tomo</title>
 
     <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-<body>
+<body class="is-booting">
 
 <header class="topbar">
 
@@ -33,7 +33,97 @@
         </a>
     </nav>
 
+    <details class="user-menu hidden" id="userMenu">
+
+        <summary class="user-button" aria-label="Tu cuenta">
+            <span class="user-initial" id="userInitial" aria-hidden="true"></span>
+        </summary>
+
+        <div class="user-panel">
+
+            <p class="user-name" id="userName"></p>
+            <p class="user-email" id="userEmail"></p>
+
+            <button type="button" class="user-item" id="logoutButton">
+                Cerrar sesión
+            </button>
+
+            <button type="button" class="user-item user-danger" id="deleteAccountButton">
+                Eliminar mi cuenta…
+            </button>
+
+        </div>
+
+    </details>
+
 </header>
+
+
+<!-- ============================================================
+     ACCESO (solo se ve sin sesión)
+============================================================ -->
+
+<section class="auth-screen hidden" id="authScreen" aria-labelledby="authTitle">
+
+    <div class="auth-card">
+
+        <span class="brand-mark auth-mark" aria-hidden="true">
+            <i></i><i></i><i></i>
+        </span>
+
+        <h1 id="authTitle">Tomo</h1>
+
+        <p class="auth-lead">
+            Tu lista de MyAnimeList y tu colección de mangas en Argentina,
+            en un solo lugar.
+        </p>
+
+        <div class="auth-tabs" role="tablist">
+            <button type="button" role="tab" class="auth-tab active"
+                    id="tabLogin" aria-selected="true">Ingresar</button>
+            <button type="button" role="tab" class="auth-tab"
+                    id="tabRegister" aria-selected="false">Crear cuenta</button>
+        </div>
+
+        <form id="authForm" class="auth-form" novalidate>
+
+            <div class="auth-field hidden" id="nameRow">
+                <label for="authName">Nombre <span class="optional">(opcional)</span></label>
+                <input id="authName" class="field" type="text"
+                       maxlength="40" autocomplete="nickname">
+            </div>
+
+            <div class="auth-field">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" class="field" type="email"
+                       autocomplete="email" inputmode="email"
+                       autocapitalize="none" required>
+            </div>
+
+            <div class="auth-field">
+                <label for="authPassword">Contraseña</label>
+                <input id="authPassword" class="field" type="password"
+                       autocomplete="current-password" required>
+                <p class="auth-hint hidden" id="passwordHint">
+                    Al menos 8 caracteres.
+                </p>
+            </div>
+
+            <p class="auth-legacy hidden" id="legacyNote">
+                Tenés datos guardados de antes (biblioteca, lista de MAL).
+                La primera cuenta que crees los conserva.
+            </p>
+
+            <p class="auth-error hidden" id="authError" role="alert"></p>
+
+            <button type="submit" class="btn btn-primary auth-submit"
+                    id="authSubmit">Ingresar</button>
+
+        </form>
+
+    </div>
+
+</section>
 
 
 <main class="container">
@@ -608,11 +698,47 @@
 </dialog>
 
 
+<dialog id="deleteDialog" class="dialog" aria-labelledby="deleteTitle">
+
+    <form method="dialog" id="deleteForm" class="dialog-form" novalidate>
+
+        <h2 id="deleteTitle">Eliminar mi cuenta</h2>
+
+        <p class="dialog-note">
+            Se borran tu cuenta, tu biblioteca, tu lista de MyAnimeList y tus
+            series cargadas a mano. No se puede deshacer.
+        </p>
+
+        <label for="deletePassword">Escribí tu contraseña para confirmar</label>
+
+        <input id="deletePassword" class="field" type="password"
+               autocomplete="current-password">
+
+        <p class="auth-error hidden" id="deleteError" role="alert"></p>
+
+        <div class="dialog-actions">
+
+            <button type="button" id="deleteCancel" class="btn btn-ghost">
+                Cancelar
+            </button>
+
+            <button type="submit" id="deleteConfirm" class="btn btn-danger">
+                Eliminar para siempre
+            </button>
+
+        </div>
+
+    </form>
+
+</dialog>
+
+
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
 
-<script src="{{ url_for('static', filename='script.js') }}"></script>
-<script src="{{ url_for('static', filename='argentina.js') }}"></script>
+<!-- auth.js decide si hay sesión y recién entonces carga el resto. -->
+<script src="{{ url_for('static', filename='js/auth.js') }}"
+        data-app-scripts="{{ url_for('static', filename='js/script.js') }}|{{ url_for('static', filename='js/argentina.js') }}"></script>
 
 </body>
-</html>
+</html>

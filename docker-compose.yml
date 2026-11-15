@@ -1,0 +1,28 @@
+# Base de datos local para desarrollo:
+#
+#     docker compose up -d
+#
+# Los datos quedan en el volumen "tomo_pgdata", así que sobreviven aunque
+# apagues o recrees el contenedor. Las credenciales coinciden con el valor
+# por defecto de DATABASE_URL (ver .env.example).
+services:
+  db:
+    image: postgres:16
+    container_name: tomo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tomo
+      POSTGRES_PASSWORD: tomo
+      POSTGRES_DB: tomo
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - tomo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tomo -d tomo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  tomo_pgdata:

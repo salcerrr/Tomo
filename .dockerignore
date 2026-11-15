@@ -1,0 +1,15 @@
+.venv/
+.git/
+.github/
+.vscode/
+__pycache__/
+*.pyc
+.env
+data/
+tests/
+.pytest_cache/
+requirements-dev.txt
+pytest.ini
+INICIAR.bat
+docker-compose.yml
+README.md

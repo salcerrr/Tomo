@@ -1,6 +1,5 @@
 import atexit
-import json
-import os
+import logging
 import re
 import requests
 import time
@@ -10,11 +9,10 @@ import unicodedata
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
-from config import (
-    DATA_DIR,
-    JIKAN_BASE_URL,
-    MAGAZINES,
-)
+from tomo import store
+from tomo.config import JIKAN_BASE_URL
+
+log = logging.getLogger("tomo.jikan")
 
 
 class JikanError(Exception):
@@ -33,9 +31,8 @@ class JikanClient:
     SEARCH_CACHE_TTL = 21600
     MAX_SEARCH_CACHE = 100
 
-    # Archivo donde se persisten las cachés entre ejecuciones.
-    # Para forzar una recarga completa, borrá este archivo.
-    DISK_CACHE_PATH = DATA_DIR / "cache.json"
+    # Las cachés se persisten en la tabla api_cache de PostgreSQL.
+    # Para forzar una recarga completa: DELETE FROM api_cache;
     DISK_SAVE_INTERVAL = 10
 
     # Filtros fijos de la búsqueda de mangas: todos los géneros y
@@ -85,60 +82,92 @@ class JikanClient:
         self.disk_lock = threading.Lock()
         self.last_disk_save = 0
 
+        # Qué versión de cada entrada ya está guardada en la base, para
+        # escribir solo lo nuevo: {(espacio, clave): momento_de_guardado}
+        self._persisted = {}
+
         self.load_disk_cache()
 
         atexit.register(self.save_disk_cache)
 
     # --------------------------------
-    # Caché persistente en disco
+    # Caché persistente (PostgreSQL)
     # --------------------------------
+
+    @property
+    def _search_namespace(self):
+        # La versión de la consulta va en el nombre: al cambiarla, lo
+        # guardado con parámetros viejos deja de usarse.
+        return f"search:{self.SEARCH_CACHE_VERSION}"
 
     def load_disk_cache(self):
         """
         Carga las cachés guardadas por ejecuciones anteriores.
-        Cualquier problema con el archivo se ignora: simplemente
+        Cualquier problema con la base se registra y se ignora: simplemente
         se empieza con la caché vacía.
         """
 
         try:
 
-            with open(
-                self.DISK_CACHE_PATH,
-                "r",
-                encoding="utf-8"
-            ) as file:
-                stored = json.load(file)
+            store.ready()
 
-            now = time.time()
+            store.purge_cache(
+                {
+                    self._search_namespace: self.SEARCH_CACHE_TTL,
+                    "forum": self.FORUM_CACHE_TTL,
+                    "serializations": self.SERIALIZATION_CACHE_TTL,
+                },
+                stale_prefix="search:",
+                keep_namespace=self._search_namespace,
+            )
 
-            if stored.get("version") == self.SEARCH_CACHE_VERSION:
+            search = store.load_cache(
+                self._search_namespace,
+                self.SEARCH_CACHE_TTL,
+                self.MAX_SEARCH_CACHE,
+            )
 
-                for key, (saved, data) in stored.get(
-                    "search", {}
-                ).items():
+            forum = store.load_cache(
+                "forum", self.FORUM_CACHE_TTL, self.MAX_FORUM_CACHE
+            )
 
-                    if now - saved < self.SEARCH_CACHE_TTL:
-                        self.search_cache[key] = (saved, data)
+            serializations = store.load_cache(
+                "serializations", self.SERIALIZATION_CACHE_TTL, 10**6
+            )
 
-            for key, (saved, data) in stored.get(
-                "forum", {}
-            ).items():
+            self.search_cache = dict(search)
 
-                if now - saved < self.FORUM_CACHE_TTL:
-                    self.forum_cache[int(key)] = (saved, data)
+            self.forum_cache = {
+                int(key): value for key, value in forum.items()
+            }
 
-            for key, (saved, data) in stored.get(
-                "serializations", {}
-            ).items():
+            self.serial_cache = {
+                int(key): value for key, value in serializations.items()
+            }
 
-                if now - saved < self.SERIALIZATION_CACHE_TTL:
-                    self.serial_cache[int(key)] = (saved, data)
+            self._persisted = {
+                (self._search_namespace, key): value[0]
+                for key, value in search.items()
+            }
 
-        except (OSError, ValueError, TypeError, AttributeError):
+            self._persisted.update({
+                ("forum", str(key)): value[0]
+                for key, value in self.forum_cache.items()
+            })
+
+            self._persisted.update({
+                ("serializations", str(key)): value[0]
+                for key, value in self.serial_cache.items()
+            })
+
+        except Exception:
+
+            log.exception("No se pudo cargar la caché de la base")
 
             self.search_cache = {}
             self.forum_cache = {}
             self.serial_cache = {}
+            self._persisted = {}
 
     def save_disk_cache(self, throttle=False):
 
@@ -162,42 +191,35 @@ class JikanClient:
             with self.serial_cache_lock:
                 serializations = dict(self.serial_cache)
 
-            payload = {
-                "version": self.SEARCH_CACHE_VERSION,
-                "serializations": {
-                    str(key): value
-                    for key, value in serializations.items()
-                },
-                "search": search,
-                "forum": {
-                    str(key): value
-                    for key, value in forum.items()
-                }
+            groups = {
+                self._search_namespace: search,
+                "forum": forum,
+                "serializations": serializations,
             }
-
-            temporary = self.DISK_CACHE_PATH.with_name(
-                "cache.json.tmp"
-            )
 
             try:
 
-                temporary.parent.mkdir(
-                    parents=True,
-                    exist_ok=True
-                )
+                saved_now = {}
 
-                with open(
-                    temporary,
-                    "w",
-                    encoding="utf-8"
-                ) as file:
-                    json.dump(payload, file)
+                for namespace, items in groups.items():
 
-                os.replace(temporary, self.DISK_CACHE_PATH)
+                    pending = {
+                        str(key): value
+                        for key, value in items.items()
+                        if self._persisted.get((namespace, str(key)))
+                        != value[0]
+                    }
 
-            except (OSError, TypeError, ValueError):
-                # La caché en disco es opcional: si falla, seguimos.
-                pass
+                    store.save_cache(namespace, pending)
+
+                    for key, value in pending.items():
+                        saved_now[(namespace, key)] = value[0]
+
+                self._persisted.update(saved_now)
+
+            except Exception:
+                # La caché es opcional: si falla, seguimos.
+                log.exception("No se pudo guardar la caché en la base")
 
     def normalize(self, text):
 
@@ -438,54 +460,6 @@ class JikanClient:
         self.magazine_cache_time = time.time()
 
         return magazines
-
-    def resolve_magazines(self, progress_callback=None):
-
-        catalogue = self.get_magazines(
-            progress_callback=progress_callback
-        )
-
-        lookup = {}
-
-        for magazine in catalogue:
-
-            name = magazine.get("name", "")
-            magazine_id = magazine.get("mal_id")
-
-            if not name or not magazine_id:
-                continue
-
-            normalized = self.normalize(name)
-
-            lookup.setdefault(
-                normalized,
-                []
-            ).append({
-                "mal_id": magazine_id,
-                "name": name
-            })
-
-        resolved = {}
-
-        for requested in MAGAZINES:
-
-            matches = lookup.get(
-                self.normalize(requested),
-                []
-            )
-
-            if len(matches) == 1:
-
-                resolved[requested] = matches[0]
-
-            elif len(matches) > 1:
-
-                resolved[requested] = {
-                    "ambiguous": True,
-                    "matches": matches
-                }
-
-        return resolved
 
     # --------------------------------
     # Revistas detectadas a partir de la lista de MAL

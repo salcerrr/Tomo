@@ -1,0 +1,31 @@
+# Despliegue en Render (https://render.com) como "Blueprint".
+#
+# La base de datos NO va acá: el plan gratis de PostgreSQL de Render vence a
+# los 30 días. Se usa una base externa (por ejemplo Neon) y su dirección se
+# pega en DATABASE_URL cuando Render la pide.
+services:
+  - type: web
+    name: tomo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn.conf.py wsgi:app
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      # Dirección de la base (conexión directa, sin "-pooler"). Se completa
+      # en el panel de Render.
+      - key: DATABASE_URL
+        sync: false
+      # Render genera una clave al azar la primera vez.
+      - key: SECRET_KEY
+        generateValue: true
+      # Tu email: queda como administrador del catálogo.
+      - key: TOMO_ADMIN_EMAILS
+        sync: false
+      - key: TOMO_HTTPS
+        value: "1"
+      # Hay un proxy de Render delante de la app: así se ve la IP real.
+      - key: TOMO_PROXY_HOPS
+        value: "1"
